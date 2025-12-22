@@ -1,17 +1,28 @@
 import pygame
-
+from pygame.sprite import Group
+from circleshape import CircleShape
+import sys
 from constants import SCREEN_WIDTH, SCREEN_HEIGHT
-from logger import log_state
+from logger import log_state, log_event
 from player import Player
+from asteroid import Asteroid
+from shot import Shot
+import asteroidfield
 
 def main() -> None:
     pygame.init()
     screen: pygame.Surface = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     clock: pygame.time.Clock = pygame.time.Clock()
-    updatable = pygame.sprite.Group()
-    drawable= pygame.sprite.Group() 
+    asteroids: Group["Asteroid"] = pygame.sprite.Group()
+    updatable: Group["CircleShape"] = pygame.sprite.Group()
+    drawable: Group["CircleShape"] = pygame.sprite.Group() 
+    shots: Group["CircleShape"] = pygame.sprite.Group()
     Player.containers = (updatable, drawable)
-    Player(x = SCREEN_WIDTH / 2, y = SCREEN_HEIGHT / 2)
+    Asteroid.containers = (asteroids, updatable, drawable)
+    Shot.containers = (updatable, drawable, shots)
+    player: Player = Player(x = SCREEN_WIDTH / 2, y = SCREEN_HEIGHT / 2)
+    asteroidfield.AsteroidField.containers = (updatable)
+    asteroidfield.AsteroidField()
     dt: float = 0
 
     while True:
@@ -21,6 +32,17 @@ def main() -> None:
                 return
         screen.fill(color="black")
         updatable.update(dt)
+        for asteroid in asteroids:
+            if asteroid.collides_with(player):
+                log_event("player_hit")
+                print("Game over!")
+                sys.exit()
+            for shot in shots:
+                if shot.collides_with(asteroid):
+                    log_event("asteroid_shot")
+                    shot.kill()
+                    asteroid.split()
+
         for obj in drawable:
             obj.draw(screen)
         pygame.display.flip()
